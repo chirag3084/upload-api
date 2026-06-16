@@ -1,5 +1,5 @@
 import os
-import re
+
 import uuid
 from pathlib import Path
 from fastapi import FastAPI, UploadFile, File, HTTPException, status, BackgroundTasks
@@ -10,6 +10,8 @@ from google.genai import types
 from pypdf import PdfReader
 from dotenv import load_dotenv
 load_dotenv()
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 # Initialize FastAPI App
 app = FastAPI(
@@ -215,17 +217,10 @@ async def chat_with_docs_gemini(question: str):
             detail=f"Gemini API integration error: {str(e)}",
         )
 
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/")
 def root():
     return FileResponse("static/index.html")
-
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
