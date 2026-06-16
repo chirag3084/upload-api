@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DocMind — AI Document Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:      #0d0d0d;
+      --paper:    #f7f5f0;
+      --mist:     #e9e6df;
+      --rule:     #d4d0c8;
+      --accent:   #2563eb;
+      --accent-lt:#dbeafe;
+      --danger:   #dc2626;
+      --danger-lt:#fee2e2;
+      --success:  #16a34a;
+      --success-lt:#dcfce7;
+      --mono:     'DM Mono', monospace;
+      --serif:    'Instrument Serif', serif;
+      --sans:     'Inter', sans-serif;
+    }
+
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── LAYOUT ── */
+    header {
+      border-bottom: 1px solid var(--rule);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      background: var(--paper);
+      z-index: 10;
+    }
+    .logo {
+      font-family: var(--serif);
+      font-size: 1.35rem;
+      letter-spacing: -0.01em;
+    }
+    .logo em { font-style: italic; color: var(--accent); }
+    .base-url-badge {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: #888;
+      background: var(--mist);
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      padding: 3px 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .base-url-badge input {
+      background: none;
+      border: none;
+      outline: none;
+      font: inherit;
+      color: var(--ink);
+      width: 200px;
+    }
+
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 2.5rem 2rem 4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    /* ── TABS ── */
+    .tabs {
+      display: flex;
+      gap: 0;
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--mist);
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      background: none;
+      font: 500 13px var(--sans);
+      color: #666;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+    }
+    .tab-btn:not(:last-child) { border-right: 1px solid var(--rule); }
+    .tab-btn.active {
+      background: var(--paper);
+      color: var(--ink);
+      font-weight: 600;
+    }
+    .tab-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: flex; flex-direction: column; gap: 1.25rem; }
+
+    /* ── CARD ── */
+    .card {
+      background: #fff;
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+      padding: 1.5rem;
+    }
+    .card-title {
+      font-family: var(--serif);
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title svg { color: var(--accent); width: 18px; height: 18px; }
+
+    /* ── DROP ZONE ── */
+    .dropzone {
+      border: 2px dashed var(--rule);
+      border-radius: 8px;
+      padding: 2.5rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+    }
+    .dropzone:hover, .dropzone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-lt);
+    }
+    .dropzone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer;
+    }
+    .dropzone-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+    .dropzone p { font-size: 0.85rem; color: #666; margin-top: 4px; }
+    .dropzone strong { color: var(--ink); }
+
+    .file-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--mist);
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+    }
+    .file-pill .fname { font-family: var(--mono); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-pill .fsize { color: #888; font-size: 0.78rem; }
+    .file-pill button { background: none; border: none; cursor: pointer; color: #aaa; font-size: 1rem; line-height: 1; }
+    .file-pill button:hover { color: var(--danger); }
+
+    /* ── INPUTS ── */
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label { font-size: 0.8rem; font-weight: 500; color: #555; letter-spacing: 0.03em; text-transform: uppercase; }
+    .field input, .field textarea {
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      padding: 9px 12px;
+      font: 15px var(--sans);
+      background: var(--paper);
+      color: var(--ink);
+      transition: border-color 0.15s;
+      outline: none;
+      width: 100%;
+    }
+    .field input:focus, .field textarea:focus { border-color: var(--accent); }
+    .field textarea { resize: vertical; min-height: 80px; }
+
+    .row { display: flex; gap: 0.75rem; align-items: flex-end; }
+    .row .field { flex: 1; }
+
+    /* ── BUTTON ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 18px;
+      border: none;
+      border-radius: 6px;
+      font: 500 14px var(--sans);
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+    .btn svg { width: 15px; height: 15px; }
+
+    /* ── RESPONSE BOX ── */
+    .response-box {
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .response-header {
+      background: var(--mist);
+      padding: 8px 14px;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: #777;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--rule);
+    }
+    .status-pill {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 500;
+    }
+    .status-pill.ok { background: var(--success-lt); color: var(--success); }
+    .status-pill.err { background: var(--danger-lt); color: var(--danger); }
+    .status-pill.loading { background: var(--accent-lt); color: var(--accent); }
+    pre {
+      padding: 1rem;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      line-height: 1.7;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 360px;
+      overflow-y: auto;
+    }
+
+    /* ── SEARCH RESULTS ── */
+    .results-list { display: flex; flex-direction: column; gap: 0.75rem; }
+    .result-card {
+      border: 1px solid var(--rule);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .result-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--mist);
+      border-bottom: 1px solid var(--rule);
+      font-size: 0.78rem;
+    }
+    .result-meta .tag {
+      font-family: var(--mono);
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      padding: 1px 7px;
+      color: #555;
+    }
+    .result-body { padding: 12px; font-size: 0.85rem; color: #333; line-height: 1.65; }
+
+    /* ── CHAT ── */
+    .chat-answer {
+      background: #fff;
+      border: 1px solid var(--rule);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 16px;
+      font-size: 0.9rem;
+      line-height: 1.7;
+    }
+    .sources-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .source-chip {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      background: var(--accent-lt);
+      color: var(--accent);
+      border-radius: 4px;
+      padding: 2px 8px;
+    }
+
+    /* ── ALERT ── */
+    .alert {
+      border-radius: 7px;
+      padding: 12px 14px;
+      font-size: 0.85rem;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .alert.success { background: var(--success-lt); color: #14532d; border: 1px solid #bbf7d0; }
+    .alert.error   { background: var(--danger-lt);  color: #7f1d1d; border: 1px solid #fecaca; }
+
+    /* ── SPINNER ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+
+    @media (max-width: 600px) {
+      header { padding: 0 1rem; }
+      main { padding: 1.5rem 1rem 3rem; }
+      .base-url-badge input { width: 130px; }
+      .row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Doc<em>Mind</em></div>
+  <div class="base-url-badge">
+    API:
+    <input id="baseUrl" value="http://localhost:8000" spellcheck="false" />
+  </div>
+</header>
+
+<main>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="upload">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M16 10l-4-4-4 4M12 6v10"/></svg>
+      Upload
+    </button>
+    <button class="tab-btn" data-tab="search">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      Search
+    </button>
+    <button class="tab-btn" data-tab="chat">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      Chat
+    </button>
+  </div>
+
+  <!-- ── UPLOAD TAB ── -->
+  <div class="tab-panel active" id="tab-upload">
+    <div class="card">
+      <div class="card-title">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M16 10l-4-4-4 4M12 6v10"/></svg>
+        Upload Document
+      </div>
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="fileInput" accept=".pdf,.txt,.md" />
+        <div class="dropzone-icon">📄</div>
+        <strong>Drop a file here</strong>
+        <p>or click to browse &nbsp;·&nbsp; PDF, TXT, MD &nbsp;·&nbsp; Max 10 MB</p>
+      </div>
+      <div id="filePill" style="display:none; margin-top:0.75rem;"></div>
+      <div style="margin-top:1rem; display:flex; justify-content:flex-end;">
+        <button class="btn btn-primary" id="uploadBtn" disabled>
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M16 10l-4-4-4 4M12 6v10"/></svg>
+          Upload &amp; Index
+        </button>
+      </div>
+    </div>
+    <div id="uploadResult" style="display:none;" class="response-box">
+      <div class="response-header">
+        <span>POST /api/v1/upload</span>
+        <span id="uploadStatus" class="status-pill"></span>
+      </div>
+      <pre id="uploadPre"></pre>
+    </div>
+  </div>
+
+  <!-- ── SEARCH TAB ── -->
+  <div class="tab-panel" id="tab-search">
+    <div class="card">
+      <div class="card-title">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Semantic Search
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Query</label>
+          <input id="searchQuery" type="text" placeholder="e.g. What are the payment terms?" />
+        </div>
+        <div class="field" style="max-width:90px;">
+          <label>Results</label>
+          <input id="searchLimit" type="number" value="3" min="1" max="10" />
+        </div>
+        <button class="btn btn-primary" id="searchBtn">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Search
+        </button>
+      </div>
+    </div>
+    <div id="searchResult" style="display:none;"></div>
+  </div>
+
+  <!-- ── CHAT TAB ── -->
+  <div class="tab-panel" id="tab-chat">
+    <div class="card">
+      <div class="card-title">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        Ask Gemini
+      </div>
+      <div class="field">
+        <label>Question</label>
+        <textarea id="chatQuestion" rows="3" placeholder="Ask anything about your uploaded documents…"></textarea>
+      </div>
+      <div style="margin-top:0.75rem; display:flex; justify-content:flex-end;">
+        <button class="btn btn-primary" id="chatBtn">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Ask
+        </button>
+      </div>
+    </div>
+    <div id="chatResult" style="display:none;"></div>
+  </div>
+
+</main>
+
+<script>
+  // ── Utilities ──
+  const $ = id => document.getElementById(id);
+  const getBase = () => $('baseUrl').value.replace(/\/$/, '');
+
+  // ── Tab switching ──
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      $('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ── File drop / select ──
+  let selectedFile = null;
+  const dropzone = $('dropzone');
+  const fileInput = $('fileInput');
+  const uploadBtn = $('uploadBtn');
+
+  function setFile(file) {
+    if (!file) return;
+    selectedFile = file;
+    const pill = $('filePill');
+    pill.style.display = 'flex';
+    pill.innerHTML = `
+      <div class="file-pill">
+        <span>📄</span>
+        <span class="fname">${file.name}</span>
+        <span class="fsize">${(file.size / 1024).toFixed(1)} KB</span>
+        <button title="Remove" onclick="clearFile()">✕</button>
+      </div>`;
+    uploadBtn.disabled = false;
+  }
+
+  function clearFile() {
+    selectedFile = null;
+    fileInput.value = '';
+    $('filePill').style.display = 'none';
+    uploadBtn.disabled = true;
+  }
+
+  fileInput.addEventListener('change', () => setFile(fileInput.files[0]));
+
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropzone.classList.remove('drag-over');
+    setFile(e.dataTransfer.files[0]);
+  });
+
+  // ── Upload ──
+  uploadBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    const resultBox = $('uploadResult');
+    const pre = $('uploadPre');
+    const statusPill = $('uploadStatus');
+
+    resultBox.style.display = 'block';
+    statusPill.className = 'status-pill loading';
+    statusPill.innerHTML = '<span class="spinner"></span> uploading…';
+    pre.textContent = '';
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '<span class="spinner"></span> Uploading…';
+
+    try {
+      const form = new FormData();
+      form.append('file', selectedFile);
+      const res = await fetch(`${getBase()}/api/v1/upload`, { method: 'POST', body: form });
+      const data = await res.json();
+      pre.textContent = JSON.stringify(data, null, 2);
+      if (res.ok) {
+        statusPill.className = 'status-pill ok';
+        statusPill.textContent = `${res.status} OK`;
+      } else {
+        statusPill.className = 'status-pill err';
+        statusPill.textContent = `${res.status} Error`;
+      }
+    } catch (err) {
+      pre.textContent = `Network error: ${err.message}\n\nMake sure your API server is running and CORS is enabled.`;
+      statusPill.className = 'status-pill err';
+      statusPill.textContent = 'Failed';
+    } finally {
+      uploadBtn.disabled = false;
+      uploadBtn.innerHTML = `<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M16 10l-4-4-4 4M12 6v10"/></svg> Upload &amp; Index`;
+    }
+  });
+
+  // ── Search ──
+  $('searchBtn').addEventListener('click', async () => {
+    const query = $('searchQuery').value.trim();
+    if (!query) return $('searchQuery').focus();
+    const limit = parseInt($('searchLimit').value) || 3;
+    const resultEl = $('searchResult');
+    const btn = $('searchBtn');
+
+    resultEl.style.display = 'none';
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Searching…';
+
+    try {
+      const res = await fetch(`${getBase()}/api/v1/search?query=${encodeURIComponent(query)}&limit=${limit}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = `<div class="alert error">⚠️ ${data.detail || 'Search failed.'}</div>`;
+        return;
+      }
+
+      const matches = data.matches || [];
+      if (matches.length === 0) {
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = `<div class="alert success">No matching chunks found. Try uploading more documents or rephrasing your query.</div>`;
+        return;
+      }
+
+      resultEl.style.display = 'block';
+      resultEl.innerHTML = `
+        <div style="margin-bottom:0.5rem; font-size:0.8rem; color:#888;">
+          ${matches.length} result${matches.length > 1 ? 's' : ''} for "<strong>${query}</strong>"
+        </div>
+        <div class="results-list">
+          ${matches.map((m, i) => `
+            <div class="result-card">
+              <div class="result-meta">
+                <span style="color:#aaa; font-family:var(--mono); font-size:0.7rem;">#${i+1}</span>
+                <span class="tag">📄 ${m.source_file}</span>
+              </div>
+              <div class="result-body">${escapeHtml(m.content_snippet)}</div>
+            </div>
+          `).join('')}
+        </div>`;
+    } catch (err) {
+      resultEl.style.display = 'block';
+      resultEl.innerHTML = `<div class="alert error">Network error: ${err.message}</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg> Search`;
+    }
+  });
+
+  $('searchQuery').addEventListener('keydown', e => { if (e.key === 'Enter') $('searchBtn').click(); });
+
+  // ── Chat ──
+  $('chatBtn').addEventListener('click', async () => {
+    const question = $('chatQuestion').value.trim();
+    if (!question) return $('chatQuestion').focus();
+    const resultEl = $('chatResult');
+    const btn = $('chatBtn');
+
+    resultEl.style.display = 'none';
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Thinking…';
+
+    try {
+      const res = await fetch(`${getBase()}/api/v1/chat-gemini?question=${encodeURIComponent(question)}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = `<div class="alert error">⚠️ ${data.detail || 'Request failed.'}</div>`;
+        return;
+      }
+
+      const sources = data.source_documents || [];
+      resultEl.style.display = 'block';
+      resultEl.innerHTML = `
+        <div class="chat-answer">
+          <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em; color:#aaa; margin-bottom:8px; font-weight:600;">Gemini</div>
+          <div style="white-space:pre-wrap;">${escapeHtml(data.answer || '')}</div>
+          ${sources.length ? `
+          <div class="sources-row">
+            ${sources.map(s => `<span class="source-chip">📄 ${s}</span>`).join('')}
+          </div>` : ''}
+        </div>`;
+    } catch (err) {
+      resultEl.style.display = 'block';
+      resultEl.innerHTML = `<div class="alert error">Network error: ${err.message}</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Ask`;
+    }
+  });
+
+  // ── Helpers ──
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+</script>
+</body>
+</html>
