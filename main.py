@@ -11,8 +11,11 @@ from pypdf import PdfReader
 from dotenv import load_dotenv
 
 load_dotenv()
+import urllib
+import io
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 # Initialize FastAPI App
 app = FastAPI(
@@ -55,7 +58,10 @@ EICAR_SIGNATURE = (
     b"X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
 )
 
-from fastapi.middleware.cors import CORSMiddleware
+
+ALLOWED_ORIGINS = [
+    "https://upload-api-stl8.onrender.com/",  # Your main production frontend
+]
 
 app.add_middleware(
     CORSMiddleware,
@@ -111,11 +117,11 @@ def parse_document_from_url(file_url: str, ext: str) -> str:
 
 
 async def run_ai_ingestion_pipeline(
-    file_path: Path, original_filename: str, doc_id: str
+    file_url: str,ext:str, original_filename: str, doc_id: str
 ):
     """Background worker that chunks documents and indexes them into vector memory."""
     try:
-        raw_text = parse_document_from_url(file_path)
+        raw_text = parse_document_from_url(file_url,ext)
         if not raw_text.strip():
             print(
                 f"Skipping processing: No indexable text found in {original_filename}"
