@@ -92,7 +92,7 @@ def parse_document_from_url(file_url: str, ext: str = None) -> str:
         # If ext is not provided, extract it from the file_url
         if ext is None:
             _, extracted_ext = os.path.splitext(
-                file_url.split("?")[0]
+                file_url.split("?")[0]  
             )  # split('?')[0] handles query params
             ext = extracted_ext.lower()
         else:
