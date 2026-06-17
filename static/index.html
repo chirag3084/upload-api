@@ -745,7 +745,7 @@
       btn.innerHTML = '<span class="spinner"></span> Searching…';
 
       try {
-        const res = await fetch("https://upload-api-stl8.onrender.com/api/v1/search?query=${encodeURIComponent(query)}&limit=${limit}");
+        const res = await fetch(`https://upload-api-stl8.onrender.com/api/v1/search?query=${encodeURIComponent(query)}&limit=${limit}`);
         const data = await res.json();
 
         if (!res.ok) {
@@ -800,7 +800,7 @@
       btn.innerHTML = '<span class="spinner"></span> Thinking…';
 
       try {
-        const res = await fetch("https://upload-api-stl8.onrender.com/api/v1/chat-gemini?question=${encodeURIComponent(question)}");
+        const res = await fetch(`https://upload-api-stl8.onrender.com/api/v1/chat-gemini?question=${encodeURIComponent(question)}`);
         const data = await res.json();
 
         if (!res.ok) {
